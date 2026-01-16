@@ -14,6 +14,7 @@ addOnUISdk.ready.then(async () => {
     const imageUpload = document.getElementById("imageUpload");
     const colorBar = document.getElementById("colorBar");
     const importButton = document.getElementById("importButton");
+    const swapButton = document.getElementById("swapButton");
     
     if (!imageUpload) {
         console.error("Image upload element not found!");
@@ -27,8 +28,19 @@ addOnUISdk.ready.then(async () => {
         console.error("Import button element not found!");
         return;
     }
+    if (!swapButton) {
+        console.error("Swap button element not found!");
+        return;
+    }
     
     console.log("Elements found, setting up event listener...");
+
+    // State for color swap feature
+    let selectedColorIndices = [];
+    let currentPaletteData = []; // Array of {color: [r,g,b], percentage: number}
+    let currentImage = null;
+    let currentCanvas = null;
+    let currentImageData = null;
 
     // Helper function to calculate color distance
     function colorDistance(rgb1, rgb2) {
@@ -106,6 +118,54 @@ addOnUISdk.ready.then(async () => {
     function isLightColor(r, g, b) {
         const brightness = (r * 299 + g * 587 + b * 114) / 1000;
         return brightness > 128;
+    }
+
+    // Update swap button state based on selection
+    function updateSwapButtonState() {
+        swapButton.disabled = selectedColorIndices.length !== 2;
+    }
+
+    // Render color palette with selection state
+    function renderColorPalette() {
+        colorBar.innerHTML = "";
+        
+        currentPaletteData.forEach((item, index) => {
+            const [r, g, b] = item.color;
+            const percentage = item.percentage;
+            const hexColor = rgbToHex(r, g, b);
+            const textColor = isLightColor(r, g, b) ? "#000000" : "#FFFFFF";
+            const isSelected = selectedColorIndices.includes(index);
+            
+            const segment = document.createElement("div");
+            segment.className = "color-segment" + (isSelected ? " selected" : "");
+            segment.style.backgroundColor = hexColor;
+            segment.style.color = textColor;
+            segment.style.width = `${percentage}%`;
+            segment.style.minWidth = percentage > 0 ? "40px" : "0";
+            segment.textContent = `${percentage.toFixed(1)}%`;
+            segment.title = `RGB(${r}, ${g}, ${b}) - ${hexColor}`;
+            segment.dataset.colorIndex = index;
+            
+            // Add click handler for color selection
+            segment.addEventListener("click", () => {
+                const colorIndex = parseInt(segment.dataset.colorIndex);
+                
+                if (selectedColorIndices.includes(colorIndex)) {
+                    // Deselect if already selected
+                    selectedColorIndices = selectedColorIndices.filter(idx => idx !== colorIndex);
+                } else {
+                    // Select if not already selected (max 2)
+                    if (selectedColorIndices.length < 2) {
+                        selectedColorIndices.push(colorIndex);
+                    }
+                }
+                
+                renderColorPalette();
+                updateSwapButtonState();
+            });
+            
+            colorBar.appendChild(segment);
+        });
     }
 
     // Simple color quantization using median cut algorithm
@@ -280,30 +340,48 @@ addOnUISdk.ready.then(async () => {
                     const percentages = await calculateColorPercentages(img, palette);
                     console.log("Percentages calculated:", percentages);
                     
-                    // Remove temporary image from DOM
-                    document.body.removeChild(img);
+                    // Store current image and create canvas for pixel swapping
+                    currentImage = img;
+                    currentCanvas = document.createElement("canvas");
+                    const ctx = currentCanvas.getContext("2d");
+                    currentCanvas.width = img.naturalWidth;
+                    currentCanvas.height = img.naturalHeight;
+                    ctx.drawImage(img, 0, 0);
+                    currentImageData = ctx.getImageData(0, 0, currentCanvas.width, currentCanvas.height);
                     
-                    // Clear previous color bar
-                    colorBar.innerHTML = "";
+                    // Store palette data
+                    currentPaletteData = palette.map((color, index) => ({
+                        color: color,
+                        percentage: percentages[index]
+                    }));
                     
-                    // Display colors in the color bar
-                    palette.forEach((color, index) => {
-                        const [r, g, b] = color;
-                        const percentage = percentages[index];
-                        const hexColor = rgbToHex(r, g, b);
-                        const textColor = isLightColor(r, g, b) ? "#000000" : "#FFFFFF";
-                        
-                        const segment = document.createElement("div");
-                        segment.className = "color-segment";
-                        segment.style.backgroundColor = hexColor;
-                        segment.style.color = textColor;
-                        segment.style.width = `${percentage}%`;
-                        segment.style.minWidth = percentage > 0 ? "40px" : "0";
-                        segment.textContent = `${percentage.toFixed(1)}%`;
-                        segment.title = `RGB(${r}, ${g}, ${b}) - ${hexColor}`;
-                        
-                        colorBar.appendChild(segment);
-                    });
+                    // Reset selection
+                    selectedColorIndices = [];
+                    
+                    // Keep image in DOM for preview (make it visible)
+                    img.style.display = "block";
+                    img.style.position = "static";
+                    img.style.visibility = "visible";
+                    img.style.maxWidth = "100%";
+                    img.style.height = "auto";
+                    img.style.marginTop = "16px";
+                    img.style.borderRadius = "4px";
+                    img.id = "imagePreview";
+                    
+                    // Remove old preview if exists
+                    const oldPreview = document.getElementById("imagePreview");
+                    if (oldPreview && oldPreview !== img) {
+                        document.body.removeChild(oldPreview);
+                    }
+                    
+                    // Add preview after color bar
+                    if (!img.parentNode) {
+                        colorBar.parentNode.insertBefore(img, colorBar.nextSibling);
+                    }
+                    
+                    // Render color palette
+                    renderColorPalette();
+                    updateSwapButtonState();
                 } catch (error) {
                     console.error("Error extracting colors:", error);
                     // Remove temporary image if still in DOM
@@ -336,7 +414,19 @@ addOnUISdk.ready.then(async () => {
     // Handle import button click
     importButton.addEventListener("click", async () => {
         try {
-            // Check if a file was selected
+            // Check if we have a processed image (with potential swaps)
+            if (currentCanvas) {
+                // Use the swapped/modified canvas if available
+                currentCanvas.toBlob(async (blob) => {
+                    if (blob) {
+                        await addOnUISdk.app.document.addImage(blob);
+                        console.log("Image (with swaps) successfully imported to the document.");
+                    }
+                }, "image/png");
+                return;
+            }
+            
+            // Fallback to original file if no canvas available
             if (!imageUpload.files || imageUpload.files.length === 0) {
                 alert("Please select an image file first.");
                 return;
@@ -361,5 +451,100 @@ addOnUISdk.ready.then(async () => {
             console.error("Error importing image:", error);
             alert(`Failed to import image: ${error.message || "Unknown error"}`);
         }
+    });
+
+    // Swap colors in image pixels
+    function swapImagePixels(colorA, colorB, threshold = 30) {
+        if (!currentCanvas || !currentImageData) {
+            console.error("No image data available for swapping");
+            return;
+        }
+
+        const ctx = currentCanvas.getContext("2d");
+        // Create a copy of image data to modify
+        const pixels = new Uint8ClampedArray(currentImageData.data);
+        
+        // Swap pixels that are close to colorA or colorB
+        for (let i = 0; i < pixels.length; i += 4) {
+            const r = pixels[i];
+            const g = pixels[i + 1];
+            const b = pixels[i + 2];
+            const pixelRgb = [r, g, b];
+            
+            const distToA = colorDistance(pixelRgb, colorA);
+            const distToB = colorDistance(pixelRgb, colorB);
+            
+            if (distToA <= threshold) {
+                // Pixel is close to colorA, swap to colorB
+                pixels[i] = colorB[0];
+                pixels[i + 1] = colorB[1];
+                pixels[i + 2] = colorB[2];
+            } else if (distToB <= threshold) {
+                // Pixel is close to colorB, swap to colorA
+                pixels[i] = colorA[0];
+                pixels[i + 1] = colorA[1];
+                pixels[i + 2] = colorA[2];
+            }
+        }
+        
+        // Create new ImageData with modified pixels
+        const newImageData = new ImageData(pixels, currentCanvas.width, currentCanvas.height);
+        
+        // Put the modified image data back to canvas
+        ctx.putImageData(newImageData, 0, 0);
+        
+        // Update currentImageData reference
+        currentImageData = newImageData;
+        
+        // Update the image source and wait for it to load
+        return new Promise((resolve) => {
+            currentImage.onload = () => {
+                resolve();
+            };
+            currentImage.src = currentCanvas.toDataURL();
+        });
+    }
+
+    // Handle swap button click
+    swapButton.addEventListener("click", async () => {
+        if (selectedColorIndices.length !== 2) {
+            return;
+        }
+
+        const [indexA, indexB] = selectedColorIndices;
+        
+        // Prevent swapping the same color with itself
+        if (indexA === indexB) {
+            return;
+        }
+
+        const colorA = currentPaletteData[indexA].color;
+        const colorB = currentPaletteData[indexB].color;
+
+        // Swap colors in palette data
+        const tempColor = currentPaletteData[indexA].color;
+        const tempPercentage = currentPaletteData[indexA].percentage;
+        currentPaletteData[indexA].color = currentPaletteData[indexB].color;
+        currentPaletteData[indexA].percentage = currentPaletteData[indexB].percentage;
+        currentPaletteData[indexB].color = tempColor;
+        currentPaletteData[indexB].percentage = tempPercentage;
+
+        // Swap pixels in image
+        await swapImagePixels(colorA, colorB);
+
+        // Recalculate percentages after swap to ensure accuracy
+        if (currentImage && currentImage.complete) {
+            const newPercentages = await calculateColorPercentages(currentImage, currentPaletteData.map(item => item.color));
+            currentPaletteData.forEach((item, index) => {
+                item.percentage = newPercentages[index];
+            });
+        }
+
+        // Clear selection
+        selectedColorIndices = [];
+
+        // Re-render palette
+        renderColorPalette();
+        updateSwapButtonState();
     });
 });
