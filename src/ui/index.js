@@ -132,7 +132,17 @@ addOnUISdk.ready.then(async () => {
     // Update swap button state based on selection
     function updateSwapButtonState() {
         const hasTwoColors = selectedColorIndices.length === 2;
-        swapButton.disabled = !hasTwoColors;
+        
+        // Fix Spectrum Web Components button state using attributes
+        if (hasTwoColors) {
+            // Enable button: remove disabled attribute and set aria-disabled to false
+            swapButton.removeAttribute("disabled");
+            swapButton.setAttribute("aria-disabled", "false");
+        } else {
+            // Disable button: set disabled attribute and aria-disabled to true
+            swapButton.setAttribute("disabled", "");
+            swapButton.setAttribute("aria-disabled", "true");
+        }
         
         // Update helper text
         if (hasTwoColors) {
