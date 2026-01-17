@@ -1,15 +1,34 @@
-## About
+# PaletteSwap – Adobe Express Add-on
 
-This project has been created with _@adobe/create-ccweb-add-on_. As an example, this Add-on demonstrates how to get started with Add-on development using JavaScript with Document Sandbox Runtime.
+PaletteSwap is an Adobe Express add-on that helps designers instantly explore different color moods by extracting dominant colors from an image and allowing them to visually swap any two colors in real time.
 
-## Tools
+This add-on removes the need for manual recoloring and enables fast design experimentation directly inside Adobe Express.
 
--   HTML
--   CSS
--   JavaScript
+---
 
-## Setup
+## ✨ Key Features
 
-1. To install the dependencies, run `npm install`.
-2. To build the application, run `npm run build`.
-3. To start the application, run `npm run start`.
+- Extracts dominant colors from an uploaded image
+- Displays accurate color percentages
+- Clear Color 1 / Color 2 selection
+- Pixel-level color swapping
+- Clean UI built with Adobe Spectrum Web Components
+- Seamless integration with Adobe Express Developer Mode
+
+---
+
+## 🛠 Tech Stack
+
+- JavaScript
+- HTML & CSS
+- Adobe Express Add-on SDK
+- Adobe Spectrum Web Components
+- HTML Canvas API
+
+---
+
+## ▶️ How to Run the Add-on
+
+1. Clone this repository
+   ```bash
+   git clone https://github.com/jayraj1011/PaletteSwap
