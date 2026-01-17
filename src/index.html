@@ -66,9 +66,10 @@
                 display: flex;
                 flex-direction: column;
                 gap: 10px;
+                cursor: pointer !important;
             }
 
-            /* Completely hide file input - not just invisible */
+            /* FIX 1: Completely hide file input and ensure it doesn't capture cursor */
             #imageUpload {
                 position: absolute !important;
                 opacity: 0 !important;
@@ -77,6 +78,26 @@
                 overflow: hidden !important;
                 pointer-events: none !important;
                 clip: rect(0, 0, 0, 0) !important;
+                cursor: pointer !important;
+            }
+
+            /* FIX 1: Ensure the button wrapper and button itself have pointer cursor */
+            #filePickerButton {
+                cursor: pointer !important;
+            }
+
+            #filePickerButton *,
+            #filePickerButton::part(root),
+            #filePickerButton::part(button) {
+                cursor: pointer !important;
+            }
+
+            /* FIX 2: Ensure swap button has pointer when enabled */
+            #swapButton:not([disabled]):not([aria-disabled="true"]),
+            #swapButton:not([disabled]):not([aria-disabled="true"]) *,
+            #swapButton:not([disabled]):not([aria-disabled="true"])::part(root),
+            #swapButton:not([disabled]):not([aria-disabled="true"])::part(button) {
+                cursor: pointer !important;
             }
 
             /* Spectrum Button Enhancements */
@@ -86,56 +107,93 @@
                 --spectrum-button-border-radius: 8px;
                 transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
                 box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+                cursor: pointer !important;
             }
 
-            sp-button:hover:not([disabled]) {
+            /* FIX 1 & 2: Ensure all enabled buttons have pointer cursor */
+            sp-button:not([disabled]):not([aria-disabled="true"]) {
+                cursor: pointer !important;
+            }
+
+            sp-button:hover:not([disabled]):not([aria-disabled="true"]) {
                 transform: translateY(-1px);
                 box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+                cursor: pointer !important;
             }
 
-            sp-button:active:not([disabled]) {
+            sp-button:active:not([disabled]):not([aria-disabled="true"]) {
                 transform: translateY(0);
                 box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+                cursor: pointer !important;
             }
 
+            /* FIX 3: Blue Upload Button */
             sp-button[variant="primary"] {
-                background: linear-gradient(135deg, var(--spectrum-global-color-blue-600), var(--spectrum-global-color-blue-700));
+                background: #1473e6 !important;
+                color: white !important;
                 box-shadow: 0 3px 8px rgba(20, 115, 230, 0.3);
+                border-radius: 8px;
+                cursor: pointer !important;
             }
 
-            sp-button[variant="primary"]:hover:not([disabled]) {
-                background: linear-gradient(135deg, var(--spectrum-global-color-blue-700), var(--spectrum-global-color-blue-800));
+            sp-button[variant="primary"]:hover:not([disabled]):not([aria-disabled="true"]) {
+                background: #0d66d0 !important;
                 box-shadow: 0 5px 12px rgba(20, 115, 230, 0.4);
+                cursor: pointer !important;
             }
 
+            sp-button[variant="primary"]:active:not([disabled]):not([aria-disabled="true"]) {
+                background: #095aba !important;
+                cursor: pointer !important;
+            }
+
+            /* FIX 3: Green Swap Colors Button */
             sp-button[variant="accent"] {
-                background: linear-gradient(135deg, var(--spectrum-global-color-blue-600), var(--spectrum-global-color-purple-600));
-                box-shadow: 0 4px 12px rgba(20, 115, 230, 0.35);
+                background: #2ecc71 !important;
+                color: white !important;
+                box-shadow: 0 4px 12px rgba(46, 204, 113, 0.35);
+                border-radius: 8px;
+                cursor: pointer !important;
             }
 
-            sp-button[variant="accent"]:hover:not([disabled]) {
-                background: linear-gradient(135deg, var(--spectrum-global-color-blue-700), var(--spectrum-global-color-purple-700));
-                box-shadow: 0 6px 16px rgba(20, 115, 230, 0.45);
+            sp-button[variant="accent"]:hover:not([disabled]):not([aria-disabled="true"]) {
+                background: #27ae60 !important;
+                box-shadow: 0 6px 16px rgba(46, 204, 113, 0.45);
                 transform: translateY(-2px) scale(1.02);
+                cursor: pointer !important;
+            }
+
+            sp-button[variant="accent"]:active:not([disabled]):not([aria-disabled="true"]) {
+                background: #229954 !important;
+                cursor: pointer !important;
             }
 
             sp-button[variant="secondary"] {
                 background: white;
                 border: 2px solid var(--spectrum-global-color-gray-300);
                 box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+                cursor: pointer !important;
             }
 
-            sp-button[variant="secondary"]:hover:not([disabled]) {
+            sp-button[variant="secondary"]:hover:not([disabled]):not([aria-disabled="true"]) {
                 background: var(--spectrum-global-color-gray-50);
                 border-color: var(--spectrum-global-color-gray-400);
                 box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+                cursor: pointer !important;
             }
 
-            sp-button[disabled] {
+            /* FIX 2: Only apply disabled cursor when actually disabled */
+            sp-button[disabled],
+            sp-button[aria-disabled="true"] {
                 opacity: 0.45;
                 cursor: not-allowed !important;
                 transform: none !important;
                 box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+            }
+
+            /* Ensure enabled buttons never show disabled cursor */
+            sp-button:not([disabled]):not([aria-disabled="true"]) {
+                cursor: pointer !important;
             }
 
             /* Color Palette Styling */
@@ -459,12 +517,26 @@
             /* Ensure no default browser styling */
             input[type="file"] {
                 display: none !important;
+                cursor: pointer !important;
             }
 
             button {
                 appearance: none;
                 -webkit-appearance: none;
                 -moz-appearance: none;
+                cursor: pointer;
+            }
+
+            /* FIX 1: Ensure all clickable elements show pointer */
+            #filePickerButton,
+            #importButton,
+            #swapButton:not([disabled]):not([aria-disabled="true"]) {
+                cursor: pointer !important;
+            }
+
+            /* FIX 2: Prevent disabled cursor on enabled swap button */
+            #swapButton:not([disabled]):not([aria-disabled="true"]) {
+                cursor: pointer !important;
             }
         </style>
     </head>
